@@ -1,0 +1,2336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highlights 360 - YouTube Video Summarizer</title>
+    <link href="./icon.ico" rel="icon">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.3.6/dist/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #6200ea;
+            --secondary-color: #00b0ff;
+            --accent-color: #00c853;
+            --background-color: #f8f9fa;
+            --card-color: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --animation-duration: 0.3s;
+            --ring-bg: radial-gradient(circle at 30% 30%, #fff, #ddd);
+            --ring-shadow: 0 0 10px rgba(0,0,0,0.1), inset 0 1px 3px rgba(255,255,255,0.6), 0 6px 12px rgba(0,0,0,0.1);
+            --text-color: #000;
+            --spinner-color: rgba(0,0,0,0.02);
+            --clock-hand-color: rgba(0,0,0,0.7);
+            --clock-opacity: 0.6;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #bb86fc;
+            --secondary-color: #03dac6;
+            --accent-color: #64dd17;
+            --background-color: #121212;
+            --card-color: #1e1e1e;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --ring-bg: radial-gradient(circle at 30% 30%, #444, #111);
+            --ring-shadow: 0 0 20px rgba(0,255,255,0.6), inset 0 0 10px rgba(0,0,0,0.8), 0 10px 20px rgba(0,0,0,0.5);
+            --text-color: #fff;
+            --spinner-color: rgba(255,255,255,0.3);
+            --clock-hand-color: rgba(255,255,255,0.7);
+            --clock-opacity: 0.6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            transition: all var(--animation-duration) ease;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Animated Title */
+        .masked-text {
+            font-family: "Teko", sans-serif;
+            font-size: 4rem;
+            font-weight: bold;
+            color: transparent;
+            background-image: url('https://images5.alphacoders.com/795/795970.jpg');
+            background-size: 200%;
+            background-position: 0 50%;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: animate-background 5s infinite alternate linear;
+            margin: 0;
+            line-height: 1;
+        }
+
+        @keyframes animate-background {
+            0% {
+                background-position: 0 50%;
+            }
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+
+        /* 3D Icon */
+        .scene {
+            width: 80px;
+            height: 80px;
+            perspective: 800px;
+            animation: popIn 0.8s ease-out 1 forwards;
+            opacity: 0;
+            margin-left: 10px;
+        }
+
+        .revolve {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--ring-bg);
+            box-shadow: var(--ring-shadow);
+            transform-style: preserve-3d;
+            transform-origin: center;
+            animation: spinOnce 2s ease-in-out 1 forwards;
+            animation-delay: 0.2s;
+        }
+
+        .revolve::before {
+            content: "";
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: calc(100% - 21px);
+            height: calc(100% - 21px);
+            border-radius: 50%;
+            border: 3px dashed rgb(255 255 255 / 60%);
+            box-shadow: 0 0 4px rgb(0 220 255);
+            animation: var(--rev-anim, neonSpin 7s linear infinite);
+        }
+
+        .revolve .text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) translateZ(8px) rotateX(10deg);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            color:#ffffffc2;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .clock {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 60%; height: 60%;
+            transform: translate(-50%, -50%) translateZ(12px) rotateX(5deg);
+            opacity: var(--clock-opacity);
+            transform-style: preserve-3d;
+        }
+
+        .hand {
+            position: absolute;
+            bottom: 50%; left: 50%;
+            transform-origin: center bottom;
+            border-radius: 2px;
+            background: var(--clock-hand-color);
+            filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));
+        }
+
+        .hand.hour { width: 3px; height: 22%; }
+        .hand.minute { width: 2px; height: 32%; }
+        .hand.second { width: 1px; height: 38%; }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.3) rotateX(90deg); }
+            80% { opacity: 1; transform: scale(1.1) rotateX(0deg); }
+            100% { opacity: 1; transform: scale(1) rotateX(0deg); }
+        }
+
+        @keyframes spinOnce {
+            from { transform: rotateY(0deg) rotateZ(0deg); }
+            to   { transform: rotateY(360deg) rotateZ(15deg); }
+        }
+
+        @keyframes neonSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Glow Input */
+        .input-container {
+            position: relative;
+            max-width: 100%;
+            height: 60px;
+            margin: 0 auto;
+        }
+
+        .glow-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .glow {
+            max-height: 70px;
+            width: 100%;
+            position: absolute;
+            overflow: visible;
+            z-index: 1;
+            border-radius: 12px;
+            filter: blur(3px);
+        }
+
+        .glow::before {
+            content: "";
+            z-index: 1;
+            text-align: center;
+            top: 0px;
+            position: absolute;
+            width: 100%;
+            height: 999px;
+            background-repeat: no-repeat;
+            background-position: 0 0;
+            background-image: conic-gradient(#000, var(--primary-color) 15%, #000000 58%, #000 50%, var(--secondary-color) 60%, #000 97%);
+            animation: neonSpin 5s linear infinite;
+        }
+
+        .input-field {
+            position: relative;
+            z-index: 1;
+            background-color: rgb(1, 2, 1);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            padding: 0 50px 0 50px;
+            height: 56px;
+            width: 100%;
+        }
+
+        .input-field::placeholder {
+            color: #c0b9c0;
+        }
+
+        .input-field:focus {
+            outline: none;
+        }
+
+        .input-icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+            color: var(--text-secondary);
+        }
+
+        .input-icon-left {
+            left: 15px;
+        }
+
+        .input-icon-right {
+            right: 15px;
+        }
+
+        /* Cards and Content Areas */
+        .content-card {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: all var(--animation-duration) ease;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .tab {
+            position: relative;
+            transition: all var(--animation-duration) ease;
+            padding: 1rem;
+            cursor: pointer;
+        }
+
+        .tab.active:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--primary-color);
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: scaleX(0); }
+            to { transform: scaleX(1); }
+        }
+
+        .content-area {
+            height: auto;
+            min-height: 300px;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        /* Button Styles */
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .action-btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .action-btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .action-btn-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .action-btn-icon:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: var(--primary-color);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            z-index: 1;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 120px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background-color: #f0f0f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--accent-color));
+            background-size: 200% 100%;
+            animation: loading-gradient 2s linear infinite;
+            transition: width 0.5s ease;
+            border-radius: 3px;
+        }
+
+        @keyframes loading-gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Loader */
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #ddd;
+            border-bottom-color: var(--primary-color);
+            border-radius: 50%;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Theme toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 20;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: var(--card-color);
+            box-shadow: var(--shadow);
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(30deg);
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.show .modal-content {
+            transform: translateY(0);
+        }
+
+        /* Timestamps */
+        .timestamp {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 2px 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-block;
+            margin: 0 2px;
+        }
+
+        /* Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Markdown content */
+        .markdown-content {
+            line-height: 1.6;
+        }
+
+        .markdown-content h1, 
+        .markdown-content h2, 
+        .markdown-content h3, 
+        .markdown-content h4, 
+        .markdown-content h5, 
+        .markdown-content h6 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .markdown-content h1 {
+            font-size: 1.8rem;
+        }
+
+        .markdown-content h2 {
+            font-size: 1.5rem;
+        }
+
+        .markdown-content h3 {
+            font-size: 1.3rem;
+        }
+
+        .markdown-content p {
+            margin-bottom: 1rem;
+        }
+
+        .markdown-content ul, 
+        .markdown-content ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .markdown-content ul li {
+            list-style-type: disc;
+        }
+
+        .markdown-content ol li {
+            list-style-type: decimal;
+        }
+
+        .markdown-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin: 1rem 0;
+        }
+
+        .markdown-content pre {
+            background-color: #f5f5f5;
+            padding: 1rem;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .markdown-content code {
+            background-color: #f5f5f5;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1rem 0;
+        }
+
+        .markdown-content table, .markdown-content th, .markdown-content td {
+            border: 1px solid #e0e0e0;
+        }
+
+        .markdown-content th, .markdown-content td {
+            padding: 0.5rem;
+            text-align: left;
+        }
+
+        .markdown-content th {
+            background-color: #f5f5f5;
+        }
+
+        .markdown-content img {
+            max-width: 100%;
+            height: auto;
+            margin: 1rem 0;
+        }
+
+        .markdown-content a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .markdown-content a:hover {
+            text-decoration: underline;
+        }
+
+        /* Mobile Adaptations */
+        @media (max-width: 768px) {
+            .masked-text {
+                font-size: 2.5rem;
+            }
+            
+            .scene {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .revolve .text {
+                font-size: 18px;
+            }
+            
+            .btn-text {
+                display: none;
+            }
+            
+            .action-btn {
+                width: 40px;
+                height: 40px;
+                padding: 0;
+                border-radius: 50%;
+            }
+            
+            .tab {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Action buttons */
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            background-color: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .btn-icon:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: var(--primary-color);
+        }
+
+        /* Settings icon animation */
+        .settings-icon {
+            transition: transform 0.5s ease;
+        }
+
+        .settings-icon:hover {
+            transform: rotate(90deg);
+        }
+
+        /* Tab content placeholder */
+        .placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 200px;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .placeholder i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.7;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--background-color);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(var(--primary-color),var(--secondary-color));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(var(--secondary-color),var(--primary-color));
+        }
+
+        /* Adjust flex Layout */
+        .flex2 {
+            display: flex;
+
+            justify-content: flex-end;
+            align-items: baseline;
+            flex-direction: row;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Theme toggle button -->
+        <div class="theme-toggle" id="theme-toggle">
+            <i class="mdi mdi-weather-night text-xl"></i>
+        </div>
+
+        <!-- App Header -->
+        <div class="flex items-center justify-center mb-6">
+            <div class="flex items-center">
+                <h1 class="masked-text">HIGHLIGHTS</h1>
+                <div class="scene">
+                    <div class="revolve">
+                        <div class="text">360</div>
+                        <div class="clock">
+                            <div class="hand hour" id="hourHand"></div>
+                            <div class="hand minute" id="minuteHand"></div>
+                            <div class="hand second" id="secondHand"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="text-center mb-8" style="color: var(--text-secondary);">Get AI-powered summaries, mindmaps, and follow-up insights from YouTube videos</p>
+
+        <!-- URL Input Section -->
+        <div class="input-container mb-6">
+            <div class="glow-container">
+                <div class="glow"></div>
+                <input 
+                    type="text" 
+                    id="youtube-url" 
+                    class="input-field" 
+                    placeholder="Enter YouTube URL or Video ID"
+                >
+                <div class="input-icon input-icon-left">
+                    <i class="mdi mdi-youtube text-xl" style="color: #ff0000;"></i>
+                </div>
+                <div class="absolute right-0 flex space-x-1 mr-2" style="top: 10px;">
+                    <button id="paste-btn" class="tooltip action-btn-icon">
+                        <i class="mdi mdi-content-paste text-xl"></i>
+                        <span class="tooltip-text">Paste URL</span>
+                    </button>
+                    <button id="summarize-btn" class="tooltip action-btn action-btn-primary">
+                        <i class="mdi mdi-text-box-outline mr-1"></i> 
+                        <span class="btn-text">Summarize</span>
+                    </button>
+                    <button id="mindmap-btn" class="tooltip action-btn action-btn-secondary">
+                        <i class="mdi mdi-sitemap mr-1"></i> 
+                        <span class="btn-text">Mindmap</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Player -->
+        <div id="video-container" class="mb-6 hidden">
+            <div class="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden shadow-lg">
+                <div id="youtube-player" class="w-full" style="height: 400px;"></div>
+            </div>
+        </div>
+
+        <!-- Progress Bar (hidden by default) -->
+        <div id="progress-container" class="progress-container hidden">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="content-card">
+            <!-- Tabs -->
+            <div class="flex2 overflow-x-auto border-b border-gray-200">
+                <a href="#" class="tab active flex items-center" style="color: var(--primary-color); border-color: var(--primary-color);" data-tab="summary-tab">
+                    <i class="mdi mdi-text-box-outline mr-2"></i>Summary
+                </a>
+                <a href="#" class="tab flex items-center" style="color: var(--text-secondary);" data-tab="mindmap-tab">
+                    <i class="mdi mdi-sitemap mr-2"></i>Mindmap
+                </a>
+                <a href="#" class="tab flex items-center" style="color: var(--text-secondary);" data-tab="transcript-tab">
+                    <i class="mdi mdi-file-document-outline mr-2"></i>Transcript
+                </a>
+                <a href="#" class="tab flex items-center" style="color: var(--text-secondary);" data-tab="questions-tab">
+                    <i class="mdi mdi-help-circle-outline mr-2"></i>Follow-up
+                </a>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <div id="summary-tab" class="content-area markdown-content">
+                    <div class="tab-actions flex justify-end mb-2">
+                        <button id="copy-summary-btn" class="tooltip btn-icon" title="Copy to Clipboard">
+                            <i class="mdi mdi-content-copy"></i>
+                            <span class="tooltip-text">Copy Summary</span>
+                        </button>
+                        <button id="download-summary-btn" class="tooltip btn-icon" title="Download as JPG">
+                            <i class="mdi mdi-file-image"></i>
+                            <span class="tooltip-text">Download JPG</span>
+                        </button>
+                        <button id="view-summary-jpg-btn" class="tooltip btn-icon" title="View as JPG">
+                            <i class="mdi mdi-image-search-outline"></i>
+                            <span class="tooltip-text">View JPG</span>
+                        </button>
+                    </div>
+                    <div class="placeholder">
+                        <i class="mdi mdi-text-box-outline"></i>
+                        <p>Enter a YouTube URL and click "Summarize" to generate a summary</p>
+                    </div>
+                </div>
+                <div id="mindmap-tab" class="content-area markdown-content hidden">
+                    <div class="tab-actions flex justify-end mb-2">
+                        <button id="copy-mindmap-btn" class="tooltip btn-icon" title="Copy to Clipboard">
+                            <i class="mdi mdi-content-copy"></i>
+                            <span class="tooltip-text">Copy Mindmap</span>
+                        </button>
+                        <button id="download-mindmap-btn" class="tooltip btn-icon" title="Download as JPG">
+                            <i class="mdi mdi-file-image"></i>
+                            <span class="tooltip-text">Download JPG</span>
+                        </button>
+                        <button id="view-mindmap-jpg-btn" class="tooltip btn-icon" title="View as JPG">
+                            <i class="mdi mdi-image-search-outline"></i>
+                            <span class="tooltip-text">View JPG</span>
+                        </button>
+                    </div>
+                    <div class="placeholder">
+                        <i class="mdi mdi-sitemap"></i>
+                        <p>Enter a YouTube URL and click "Mindmap" to generate a mindmap</p>
+                    </div>
+                </div>
+                <div id="transcript-tab" class="content-area markdown-content hidden">
+                    <div class="tab-actions flex justify-end mb-2">
+                        <button id="copy-transcript-btn" class="tooltip btn-icon" title="Copy to Clipboard">
+                            <i class="mdi mdi-content-copy"></i>
+                            <span class="tooltip-text">Copy Transcript</span>
+                        </button>
+                        <button id="download-transcript-btn" class="tooltip btn-icon" title="Download as JPG">
+                            <i class="mdi mdi-file-image"></i>
+                            <span class="tooltip-text">Download JPG</span>
+                        </button>
+                        <button id="view-transcript-jpg-btn" class="tooltip btn-icon" title="View as JPG">
+                            <i class="mdi mdi-image-search-outline"></i>
+                            <span class="tooltip-text">View JPG</span>
+                        </button>
+                    </div>
+                    <div class="placeholder">
+                        <i class="mdi mdi-file-document-outline"></i>
+                        <p>Transcript will appear here after video processing</p>
+                    </div>
+                </div>
+                <div id="questions-tab" class="content-area markdown-content hidden">
+                    <div class="followup-container mb-4 p-4 rounded-lg bg-opacity-10">
+                        <h3 class="text-lg font-semibold mb-2">Ask a question about this video</h3>
+                        <p class="mb-2 text-sm" style="color: var(--text-secondary);">Ask for specific details, explanations, or related information.</p>
+                        <div class="flex2 space-x-3">
+                            <div class="relative flex-grow mb-2 sm:mb-0 sm:mr-2">
+                                <input type="text" id="followup-question" class="input-field w-full" placeholder="E.g., What did the speaker say about...?">
+                                <div class="input-icon input-icon-left">
+                                    <i class="mdi mdi-comment-question-outline"></i>
+                                </div>
+                            </div>
+                            <button id="ask-question-btn" class="action-btn action-btn-primary">
+                                <i class="mdi mdi-send mr-1"></i>
+                                <span class="btn-text">Ask</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="followup-answers" class="markdown-content">
+                        <div class="placeholder">
+                            <i class="mdi mdi-comment-question-outline"></i>
+                            <p>Your questions and answers will appear here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loader -->
+        <div id="loader" class="hidden flex justify-center my-8">
+            <div class="loader hidden"></div>
+        </div>
+
+        <!-- Settings Button (Floating) -->
+        <div class="fixed bottom-8 right-8 z-10">
+            <button id="settings-btn" class="settings-icon bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 shadow-lg">
+                <i class="mdi mdi-cog text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal">
+            <div class="modal-content mx-4" style="background-color: var(--card-color); color: var(--text-primary);">
+                <div class="flex justify-between items-center border-b p-4" style="border-color: var(--text-secondary);">
+                    <h2 class="text-xl font-bold"><i class="mdi mdi-cog mr-2"></i>Settings</h2>
+                    <button id="close-settings" style="color: var(--text-secondary);" class="hover:text-gray-700">
+                        <i class="mdi mdi-close text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <!-- API Keys -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-3" style="color: var(--primary-color);">API Keys</h3>
+                        <div class="mb-4">
+                            <label for="gemini-api-key" class="block mb-2">Gemini API Key</label>
+                            <div class="relative">
+                                <input type="password" id="gemini-api-key" class="input-field w-full border">
+                                <div class="input-icon input-icon-left">
+                                    <i class="mdi mdi-key-variant"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="rapidapi-key" class="block mb-2">RapidAPI Key (For transcripts)</label>
+                            <div class="relative">
+                                <input type="password" id="rapidapi-key" class="input-field w-full border">
+                                <div class="input-icon input-icon-left">
+                                    <i class="mdi mdi-key-variant"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Model Settings -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-3" style="color: var(--primary-color);">AI Model Settings</h3>
+                        <div class="mb-4">
+                            <label for="gemini-model" class="block mb-2">Gemini Model</label>
+                            <select id="gemini-model" class="input-field w-full px-4 py-2 border">
+                                <option value="gemini-pro">Loading models...</option>
+                            </select>
+                            <p class="text-sm mt-1" style="color: var(--text-secondary);">Click "Refresh Models" to fetch available models</p>
+                            <button id="refresh-models-btn" class="mt-2 action-btn action-btn-secondary">
+                                <i class="mdi mdi-refresh mr-1"></i> Refresh Models
+                            </button>
+                        </div>
+                        <div class="mb-4">
+                            <label for="fallback-model" class="block mb-2">Fallback Model</label>
+                            <select id="fallback-model" class="input-field w-full px-4 py-2 border">
+                                <option value="none">None (Use Gemini Only)</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="claude">Claude</option>
+                                <option value="groq">Groq</option>
+                                <option value="openrouter">OpenRouter</option>
+                            </select>
+                        </div>
+                        <div class="mb-4" id="fallback-api-key-container" style="display: none;">
+                            <label for="fallback-api-key" class="block mb-2">Fallback API Key</label>
+                            <div class="relative">
+                                <input type="password" id="fallback-api-key" class="input-field w-full border">
+                                <div class="input-icon input-icon-left">
+                                    <i class="mdi mdi-key-variant"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transcript Settings -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-3" style="color: var(--primary-color);">Transcript Settings</h3>
+                        <div class="mb-4 flex items-center">
+                            <label for="timestamp-toggle" class="mr-2">Enable timestamped transcript:</label>
+                            <label class="switch">
+                                <input type="checkbox" id="timestamp-toggle">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <p class="text-sm" style="color: var(--text-secondary);">
+                            Timestamped transcripts enable video navigation and precise follow-up questions, but may be slower to retrieve.
+                        </p>
+                    </div>
+
+                    <!-- Video Settings -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-3" style="color: var(--primary-color);">Video Settings</h3>
+                        <div class="mb-4">
+                            <label for="max-duration" class="block mb-2">Maximum Video Duration (minutes) before using fallback</label>
+                            <input type="number" id="max-duration" min="1" class="input-field w-full px-4 py-2 border">
+                        </div>
+                    </div>
+
+                    <!-- Prompt Templates -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-3" style="color: var(--primary-color);">Prompt Templates</h3>
+                        <div class="mb-4">
+                            <label for="summary-prompt" class="block mb-2">Summary Prompt Template</label>
+                            <textarea id="summary-prompt" rows="4" class="input-field w-full px-4 py-2 border"></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label for="mindmap-prompt" class="block mb-2">Mindmap Prompt Template</label>
+                            <textarea id="mindmap-prompt" rows="4" class="input-field w-full px-4 py-2 border"></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label for="followup-prompt" class="block mb-2">Follow-up Question Prompt Template</label>
+                            <textarea id="followup-prompt" rows="4" class="input-field w-full px-4 py-2 border"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                        <button id="reset-settings" class="btn bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md">
+                            <i class="mdi mdi-refresh mr-1"></i> Reset to Defaults
+                        </button>
+                        <button id="save-settings" class="btn bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md">
+                            <i class="mdi mdi-content-save mr-1"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Viewer Modal -->
+        <div id="image-viewer-modal" class="modal">
+            <div class="modal-content mx-4 relative overflow-hidden" style="background-color: var(--card-color); color: var(--text-primary); max-height: 90vh;">
+                <div class="flex justify-between items-center border-b p-3" style="border-color: var(--text-secondary);">
+                    <h2 class="text-lg font-bold">Image Viewer</h2>
+                    <div class="flex items-center space-x-2">
+                        <button id="zoom-out-btn" class="btn-icon" title="Zoom Out"><i class="mdi mdi-magnify-minus-outline text-xl"></i></button>
+                        <span id="zoom-level" class="text-sm">100%</span>
+                        <button id="zoom-in-btn" class="btn-icon" title="Zoom In"><i class="mdi mdi-magnify-plus-outline text-xl"></i></button>
+                        <button id="close-image-viewer" style="color: var(--text-secondary);" class="hover:text-gray-700 ml-4">
+                            <i class="mdi mdi-close text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4 overflow-auto" style="max-height: calc(90vh - 100px);">
+                    <div id="image-viewer-content" class="flex justify-center items-center min-h-full">
+                        <img id="modal-image" src="" alt="Generated Content" class="max-w-full max-h-full transition-transform duration-200 ease-in-out" style="transform-origin: center center;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="py-4 text-center mt-12" style="color: var(--text-secondary);">
+        <p>Highlights 360 - Powered by AI</p>
+        <p>Released under MIT License <a href="mailto:techflyermail+git@gmail.com">@techflyervp</a></p>
+    </footer>
+
+    <script>
+        // Constants and globals
+        const DEFAULT_SETTINGS = {
+            geminiApiKey: '',
+            rapidApiKey: 'XXXXXX6a60msh82bac4061a5265cp130865jsn81e63855cfff',
+            geminiModel: 'gemini-pro',
+            fallbackModel: 'none',
+            fallbackApiKey: '',
+            maxDuration: 20, // 20 minutes
+            useTimestampedTranscript: false,
+            summaryPrompt: `
+You are a professional content summarizer. Review the following YouTube video transcript and create a comprehensive summary. 
+Break down the content into clear sections with headings and bullet points where appropriate.
+Format your response in Markdown with:
+- A title that encapsulates the video's main focus
+- A brief overview/introduction (2-3 sentences)
+- Key sections with proper headings (H2, H3)
+- Important points highlighted with bullet points
+- A conclusion summarizing the most important takeaways
+
+Keep your language clear, concise, and professional.
+`,
+            mindmapPrompt: `
+Analyze the following YouTube transcript and create a comprehensive mind map of the content. 
+Format your response in Markdown using headings and bullet points to represent the hierarchical structure of the mind map.
+
+The mind map should include:
+- A central topic/title that captures the essence of the video (H1)
+- Main branches as H2 headings
+- Sub-branches as H3 headings and nested bullet points
+- Key concepts, definitions, and important data points
+
+Organize the information logically to show relationships between ideas. Use proper Markdown formatting to make the hierarchical structure clear.
+`,
+            followupPrompt: `
+You are an AI assistant helping with YouTube video content. Answer the following question based on the video transcript provided below. 
+
+Important instructions:
+1. If your answer references specific parts of the video, include the timestamp in [HH:MM:SS] format.
+2. Be concise but thorough in your explanations.
+3. If the question asks about something not covered in the transcript, clearly state this.
+4. Format your response in Markdown for readability.
+5. If multiple segments of the video are relevant, include all relevant timestamps.
+
+The timestamps in the transcript are crucial for helping the viewer navigate to the relevant sections of the video.
+
+Question: {{QUESTION}}
+
+Transcript:
+{{TRANSCRIPT}}
+`
+        };
+
+        let currentVideoId = null;
+        let currentTranscript = null;
+        let timestampedTranscript = null;
+        let settings = { ...DEFAULT_SETTINGS };
+        let availableModels = [];
+        let playerInstance = null;
+        let parentOrigin = null; // Variable to store the parent window's origin
+        let currentZoom = 1.0;
+        const zoomStep = 0.1;
+
+        // Initialize settings from local storage
+        function initSettings() {
+            const savedSettings = localStorage.getItem('youtubeSummarizerSettings');
+            if (savedSettings) {
+                try {
+                    settings = { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) };
+                } catch (error) {
+                    console.error('Error parsing saved settings:', error);
+                    settings = { ...DEFAULT_SETTINGS };
+                }
+            }
+            updateSettingsForm();
+            
+            // Initialize theme based on settings or system preference
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                updateThemeToggleIcon(savedTheme);
+            } else {
+                // Check for system preference
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    updateThemeToggleIcon('dark');
+                }
+            }
+        }
+
+        // Update settings form with current values
+        function updateSettingsForm() {
+            document.getElementById('gemini-api-key').value = settings.geminiApiKey || '';
+            document.getElementById('rapidapi-key').value = settings.rapidApiKey || '';
+            document.getElementById('gemini-model').value = settings.geminiModel || 'gemini-pro';
+            document.getElementById('fallback-model').value = settings.fallbackModel || 'none';
+            document.getElementById('fallback-api-key').value = settings.fallbackApiKey || '';
+            document.getElementById('max-duration').value = settings.maxDuration || 20;
+            document.getElementById('summary-prompt').value = settings.summaryPrompt || '';
+            document.getElementById('mindmap-prompt').value = settings.mindmapPrompt || '';
+            document.getElementById('followup-prompt').value = settings.followupPrompt || '';
+            document.getElementById('timestamp-toggle').checked = settings.useTimestampedTranscript || false;
+            
+            // Show/hide fallback API key field based on selection
+            const fallbackModel = document.getElementById('fallback-model').value;
+            document.getElementById('fallback-api-key-container').style.display = 
+                fallbackModel !== 'none' ? 'block' : 'none';
+        }
+
+        // Update theme toggle icon
+        function updateThemeToggleIcon(theme) {
+            const toggleIcon = document.querySelector('#theme-toggle i');
+            if (theme === 'dark') {
+                toggleIcon.classList.remove('mdi-weather-night');
+                toggleIcon.classList.add('mdi-white-balance-sunny');
+            } else {
+                toggleIcon.classList.remove('mdi-white-balance-sunny');
+                toggleIcon.classList.add('mdi-weather-night');
+            }
+        }
+
+        // Toggle theme
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            updateThemeToggleIcon(newTheme);
+        }
+
+        // Save settings to local storage
+        function saveSettings() {
+            settings.geminiApiKey = document.getElementById('gemini-api-key').value;
+            settings.rapidApiKey = document.getElementById('rapidapi-key').value;
+            settings.geminiModel = document.getElementById('gemini-model').value;
+            settings.fallbackModel = document.getElementById('fallback-model').value;
+            settings.fallbackApiKey = document.getElementById('fallback-api-key').value;
+            settings.maxDuration = parseInt(document.getElementById('max-duration').value) || 20;
+            settings.summaryPrompt = document.getElementById('summary-prompt').value;
+            settings.mindmapPrompt = document.getElementById('mindmap-prompt').value;
+            settings.followupPrompt = document.getElementById('followup-prompt').value;
+            settings.useTimestampedTranscript = document.getElementById('timestamp-toggle').checked;
+            
+            localStorage.setItem('youtubeSummarizerSettings', JSON.stringify(settings));
+            showNotification('Settings saved successfully!', 'success');
+        }
+
+        // Reset settings to defaults
+        function resetSettings() {
+            settings = { ...DEFAULT_SETTINGS };
+            updateSettingsForm();
+            localStorage.setItem('youtubeSummarizerSettings', JSON.stringify(settings));
+            showNotification('Settings reset to defaults!', 'info');
+        }
+
+        // Fetch available Gemini models
+        async function fetchGeminiModels() {
+            if (!settings.geminiApiKey) {
+                showNotification('Gemini API Key is required to fetch models.', 'error');
+                return;
+            }
+            
+            try {
+                showNotification('Fetching available Gemini models...', 'info');
+                
+                const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${settings.geminiApiKey}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data && data.models && Array.isArray(data.models)) {
+                    // Filter for Gemini models
+                    availableModels = data.models
+                        .filter(model => model.name.includes('gemini'))
+                        .map(model => ({
+                            name: model.name,
+                            displayName: model.displayName || model.name,
+                            description: model.description || ''
+                        }));
+                    
+                    // Update the model dropdown
+                    const modelSelect = document.getElementById('gemini-model');
+                    modelSelect.innerHTML = '';
+                    
+                    availableModels.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.name;
+                        option.textContent = `${model.displayName}${model.description ? ` - ${model.description}` : ''}`;
+                        modelSelect.appendChild(option);
+                    });
+                    
+                    // Select the currently saved model if available
+                    if (settings.geminiModel && modelSelect.querySelector(`option[value="${settings.geminiModel}"]`)) {
+                        modelSelect.value = settings.geminiModel;
+                    } else if (availableModels.length > 0) {
+                        // Otherwise select the first available model
+                        settings.geminiModel = availableModels[0].name;
+                        modelSelect.value = settings.geminiModel;
+                    }
+                    
+                    showNotification(`Found ${availableModels.length} Gemini models`, 'success');
+                } else {
+                    throw new Error('Invalid response format from API');
+                }
+            } catch (error) {
+                console.error('Error fetching Gemini models:', error);
+                showNotification(`Error fetching models: ${error.message}`, 'error');
+                
+                // Add default options
+                const modelSelect = document.getElementById('gemini-model');
+                modelSelect.innerHTML = `
+                    <option value="gemini-pro">gemini-pro</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                `;
+            }
+        }
+
+        // Parse YouTube video ID from URL
+        function getYouTubeVideoId(url) {
+            if (!url) return null;
+            
+            // Handle direct video ID input
+            if (url.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(url)) {
+                return url;
+            }
+            
+            // Try to extract from URL
+            let videoId = null;
+            
+            // Regular youtube.com/watch?v= URL
+            const regExp = /^.*(youtu.be\/|v\/|e\/|u\/\w+\/|embed\/|v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            
+            if (match && match[2].length === 11) {
+                videoId = match[2];
+            }
+            
+            return videoId;
+        }
+
+        // Initialize YouTube API
+        function initYouTubeAPI() {
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        }
+
+        // Load YouTube player
+        function loadYouTubePlayer(videoId) {
+            if (!videoId) return;
+            
+            const container = document.getElementById('video-container');
+            container.classList.remove('hidden');
+            
+            const playerDiv = document.getElementById('youtube-player');
+            playerDiv.innerHTML = '';
+            
+            if (window.YT && window.YT.Player) {
+                playerInstance = new YT.Player('youtube-player', {
+                    height: '400',
+                    width: '100%',
+                    videoId: videoId,
+                    playerVars: {
+                        'playsinline': 1,
+                        'modestbranding': 1,
+                        'rel': 0
+                    }
+                });
+            } else {
+                // Fallback to iframe if YT API not loaded
+                playerDiv.innerHTML = `
+                    <iframe id="youtube-iframe" width="100%" height="400" src="https://www.youtube.com/embed/${videoId}" 
+                    frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; 
+                    gyroscope; picture-in-picture" allowfullscreen></iframe>
+                `;
+            }
+            
+            currentVideoId = videoId;
+        }
+
+        // Navigate YouTube video to specific timestamp
+        function navigateToTimestamp(timestamp) {
+            if (!currentVideoId) return;
+            
+            // Parse the timestamp format [HH:MM:SS] or [MM:SS]
+            const timestampRegex = /\[(\d{1,2}:)?(\d{1,2}):(\d{1,2})\]/;
+            const match = timestamp.match(timestampRegex);
+            
+            if (!match) return;
+            
+            let hours = 0;
+            let minutes = 0;
+            let seconds = 0;
+            
+            if (match[1]) { // Has hours
+                hours = parseInt(match[1].replace(':', ''));
+                minutes = parseInt(match[2]);
+                seconds = parseInt(match[3]);
+            } else {
+                minutes = parseInt(match[2]);
+                seconds = parseInt(match[3]);
+            }
+            
+            const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+            
+            // Navigate using YT API if available, otherwise update iframe src
+            if (playerInstance && typeof playerInstance.seekTo === 'function') {
+                playerInstance.seekTo(totalSeconds);
+                if (playerInstance.getPlayerState() !== 1) { // Not playing
+                    playerInstance.playVideo();
+                }
+            } else {
+                const iframe = document.getElementById('youtube-iframe');
+                if (iframe) {
+                    // Update iframe src with timestamp
+                    const currentSrc = iframe.src.split('?')[0];
+                    iframe.src = `${currentSrc}?start=${totalSeconds}&autoplay=1`;
+                }
+            }
+        }
+
+        // Parse ISO 8601 duration to seconds
+        function parseISODuration(duration) {
+            const match = duration.match(/P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            if (!match) return 0;
+            
+            const days = parseInt(match[1] || 0) * 86400;
+            const hours = parseInt(match[2] || 0) * 3600;
+            const minutes = parseInt(match[3] || 0) * 60;
+            const seconds = parseInt(match[4] || 0);
+            
+            return days + hours + minutes + seconds;
+        }
+
+        // Format seconds to timestamp
+        function formatSecondsToTimestamp(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            if (hours > 0) {
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // Fetch video duration using RapidAPI YouTube v3 API
+        async function fetchVideoDuration(videoId) {
+            if (!videoId) throw new Error("Invalid Video ID for fetching duration.");
+            if (!settings.rapidApiKey) throw new Error("RapidAPI Key is missing. Please configure it in Settings.");
+            
+            const options = {
+                method: 'GET',
+                url: `https://youtube-v31.p.rapidapi.com/videos`,
+                params: {
+                    part: 'contentDetails',
+                    id: videoId
+                },
+                headers: {
+                    'x-rapidapi-key': settings.rapidApiKey,
+                    'x-rapidapi-host': 'youtube-v31.p.rapidapi.com'
+                }
+            };
+            
+            try {
+                console.log(`Attempting to fetch video details for ID: ${videoId}`);
+                const response = await axios.request(options);
+                
+                // Validate response structure and extract duration
+                if (response.data && response.data.items && response.data.items.length > 0) {
+                    const item = response.data.items[0];
+                    if (item.contentDetails && item.contentDetails.duration) {
+                        const isoDuration = item.contentDetails.duration;
+                        const durationInSeconds = parseISODuration(isoDuration);
+                        console.log(`Fetched video duration: ${isoDuration} (${durationInSeconds} seconds)`);
+                        return durationInSeconds;
+                    }
+                }
+                
+                throw new Error("Video duration not found in API response.");
+            } catch (error) {
+                console.error("Error fetching video details:", error.response?.data || error.message);
+                throw new Error(`Failed to fetch video details: ${error.message}`);
+            }
+        }
+
+        // Fetch transcript using RapidAPI
+        async function fetchTranscript(videoId, includeTimestamps = false) {
+            if (!videoId) throw new Error("Invalid Video ID for transcript fetching.");
+            if (!settings.rapidApiKey) throw new Error("RapidAPI Key is missing. Please configure it in Settings.");
+            
+            let options;
+            
+            // Check if videoId is a URL or a video ID
+            if (videoId.includes('youtube.com') || videoId.includes('youtu.be')) {
+                // Use URL-based endpoint when a full URL is provided
+                const encodedUrl = encodeURIComponent(videoId);
+                options = {
+                    method: 'GET',
+                    url: `https://youtube-transcript3.p.rapidapi.com/api/transcript-with-url`,
+                    params: { url: encodedUrl, flat_text: 'false', lang: 'en' },
+                    headers: {
+                        'x-rapidapi-key': settings.rapidApiKey,
+                        'x-rapidapi-host': 'youtube-transcript3.p.rapidapi.com'
+                    }
+                };
+            } else {
+                // Use videoId-based endpoint when just the ID is provided
+                options = {
+                    method: 'GET',
+                    url: `https://youtube-transcript3.p.rapidapi.com/api/transcript`,
+                    params: { videoId: videoId },
+                    headers: {
+                        'x-rapidapi-key': settings.rapidApiKey,
+                        'x-rapidapi-host': 'youtube-transcript3.p.rapidapi.com'
+                    }
+                };
+            }
+            
+            try {
+                console.log(`Attempting to fetch transcript for video: ${videoId}`);
+                const response = await axios.request(options);
+                
+                if (response.data && response.data.success && Array.isArray(response.data.transcript)) {
+                    if (response.data.transcript.length === 0) {
+                        throw new Error(`Transcript is empty or disabled for this video.`);
+                    }
+                    
+                    if (includeTimestamps) {
+                        // Format transcript with timestamps
+                        timestampedTranscript = response.data.transcript.map(item => {
+                            // Use offset value which is in seconds already, or fall back to duration if needed
+                            const seconds = Math.floor(item.offset || 0);
+                            const timestamp = formatSecondsToTimestamp(seconds);
+                            return `[${timestamp}] ${item.text}`;
+                        }).join('\n');
+                        
+                        // Plain text version without timestamps
+                        currentTranscript = response.data.transcript.map(item => item.text).join(' ');
+                        
+                        console.log(`Timestamped transcript fetched. Length: ${timestampedTranscript.length}`);
+                        return timestampedTranscript;
+                    } else {
+                        // Just concatenate the text
+                        currentTranscript = response.data.transcript.map(item => item.text).join(' ');
+                        timestampedTranscript = null;
+                        
+                        console.log(`Transcript fetched. Length: ${currentTranscript.length}`);
+                        return currentTranscript;
+                    }
+                } else {
+                    throw new Error("Transcript not available or format is incorrect.");
+                }
+            } catch (error) {
+                console.error("Error fetching transcript:", error.response?.data || error.message);
+                throw new Error(`Failed to fetch transcript: ${error.message}`);
+            }
+        }
+
+        // Call Gemini API
+        async function callGeminiApi(prompt, transcript) {
+            if (!settings.geminiApiKey) {
+                throw new Error("Gemini API Key is missing. Please configure it in Settings.");
+            }
+            
+            if (!settings.geminiModel) {
+                throw new Error("Gemini Model is missing. Please configure it in Settings.");
+            }
+
+            if ((settings.geminiModel).includes('/')) {
+                settings.geminiModel = settings.geminiModel.split('/')[1];
+            }
+            
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.geminiModel}:generateContent?key=${settings.geminiApiKey}`;
+            
+            const requestBody = {
+                contents: [
+                    {
+                        parts: [
+                            { text: prompt },
+                            { text: transcript }
+                        ]
+                    }
+                ],
+                generationConfig: {
+                    temperature: 0.7,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: 8192
+                }
+            };
+            
+            try {
+                console.log("Calling Gemini API with model:", settings.geminiModel);
+                
+                const response = await axios.post(url, requestBody, {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                // Basic check for response structure
+                if (response.data && response.data.candidates && response.data.candidates.length > 0) {
+                    const candidate = response.data.candidates[0];
+                    if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+                        return candidate.content.parts.map(part => part.text).join('');
+                    } else if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+                        throw new Error(`Gemini generation finished unexpectedly: ${candidate.finishReason}`);
+                    }
+                }
+                
+                throw new Error("Failed to parse valid content from Gemini response.");
+            } catch (error) {
+                console.error("Error calling Gemini API:", error.response?.data || error.message);
+                throw new Error(`Gemini API request failed: ${error.message}`);
+            }
+        }
+
+        // Call fallback API (placeholder for other APIs)
+        async function callFallbackApi(prompt, transcript) {
+            // This is a placeholder function that would be implemented for other APIs
+            // like OpenAI, Claude, Groq, or OpenRouter
+            throw new Error("Fallback API not implemented yet. Please use Gemini API.");
+        }
+
+        // Process timestamp links in AI responses
+        function processTimestampLinks(content) {
+            // Look for timestamp patterns like [00:00:00] or [00:00]
+            const timestampRegex = /\[(\d{1,2}:)?(\d{1,2}):(\d{1,2})\]/g;
+            
+            return content.replace(timestampRegex, match => {
+                return `<span class="timestamp cursor-pointer" onclick="navigateToTimestamp('${match}')">${match}</span>`;
+            });
+        }
+
+        // Helper function to get action buttons HTML
+        function getActionButtonsHtml(tabType) {
+            if (!['summary', 'mindmap', 'transcript'].includes(tabType)) {
+                return ''; // Return empty string for invalid types
+            }
+            // Ensure unique IDs if necessary, though IDs within different tab containers should be fine.
+            return `
+                <div class="tab-actions flex justify-end mb-2">
+                    <button id="copy-${tabType}-btn" class="tooltip btn-icon" title="Copy to Clipboard">
+                        <i class="mdi mdi-content-copy"></i>
+                        <span class="tooltip-text">Copy ${tabType.charAt(0).toUpperCase() + tabType.slice(1)}</span>
+                    </button>
+                    <button id="download-${tabType}-btn" class="tooltip btn-icon" title="Download as JPG">
+                        <i class="mdi mdi-file-image"></i>
+                        <span class="tooltip-text">Download JPG</span>
+                    </button>
+                    <button id="view-${tabType}-jpg-btn" class="tooltip btn-icon" title="View as JPG">
+                         <i class="mdi mdi-image-search-outline"></i>
+                         <span class="tooltip-text">View JPG</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        // Generate content using selected AI model
+        async function generateContent(prompt, transcript, useGemini = true) {
+            try {
+                let result;
+                if (useGemini) {
+                    result = await callGeminiApi(prompt, transcript);
+                } else {
+                    // Check which fallback model is selected
+                    switch (settings.fallbackModel) {
+                        case 'none':
+                            result = await callGeminiApi(prompt, transcript);
+                            break;
+                        default:
+                            result = await callFallbackApi(prompt, transcript);
+                            break;
+                    }
+                }
+                
+                // Post-process result to make timestamps clickable
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-md shadow-md z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 
+                'bg-blue-500'
+            } text-white`;
+            notification.innerText = message;
+            
+            // Add to DOM
+            document.body.appendChild(notification);
+            
+            // Remove after delay
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 500);
+            }, 3000);
+        }
+
+        // Show loading progress
+        function showProgress(show = true) {
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const loaderanim = document.querySelector('.revolve')
+            
+            if (show) {
+                progressContainer.classList.remove('hidden');
+                loaderanim.style.setProperty('--rev-anim', 'neonSpin 2s linear infinite');
+                
+                // Simulate progress
+                let width = 0;
+                const interval = setInterval(() => {
+                    if (width >= 95) {
+                        clearInterval(interval);
+                    } else {
+                        width += Math.random() * 5;
+                        progressBar.style.width = `${Math.min(width, 95)}%`;
+                    }
+                }, 200);
+                
+                // Store interval ID for clearing later
+                progressContainer.dataset.intervalId = interval;
+            } else {
+                // Clear interval if exists
+                if (progressContainer.dataset.intervalId) {
+                    clearInterval(parseInt(progressContainer.dataset.intervalId));
+                }
+                
+                // Complete progress
+                progressBar.style.width = '100%';
+                
+                // Hide after short delay
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    loaderanim.style.removeProperty('--rev-anim');
+                    progressBar.style.width = '0%';
+                }, 500);
+            }
+        }
+
+        // Process video
+        async function processVideo(action) {
+            const urlInput = document.getElementById('youtube-url');
+            const videoId = getYouTubeVideoId(urlInput.value);
+            
+            if (!videoId) {
+                showNotification('Please enter a valid YouTube URL or video ID', 'error');
+                return;
+            }
+            
+            try {
+                // Load YouTube player
+                loadYouTubePlayer(videoId);
+                
+                // Show loading progress
+                showProgress(true);
+                
+                // Determine which tab to show results in
+                const tabId = action === 'summarize' ? 'summary-tab' : 'mindmap-tab';
+                const activeTab = document.querySelector(`[data-tab="${tabId}"]`);
+                switchTab(activeTab);
+                
+                // Check if we already have the transcript
+                if (!currentTranscript || currentVideoId !== videoId) {
+                    try {
+                        // Check duration first to determine if we need to use fallback
+                        const duration = await fetchVideoDuration(videoId);
+                        const durationMinutes = duration / 60;
+                        
+                        if (durationMinutes > settings.maxDuration) {
+                            showNotification(`Video is longer than ${settings.maxDuration} minutes, using RapidAPI for transcript`, 'info');
+                        }
+                        
+                        // Fetch transcript
+                        const useTimestamps = settings.useTimestampedTranscript;
+                        await fetchTranscript(videoId, useTimestamps);
+                        
+                        // Display transcript in its tab
+                        const transcriptTab = document.getElementById('transcript-tab');
+                        const transcriptContentHtml = `<pre class="whitespace-pre-wrap p-4">${useTimestamps ? timestampedTranscript : currentTranscript}</pre>`;
+                        let processedTranscriptHtml = transcriptContentHtml;
+
+                        // If we have timestamps, make them clickable in the transcript
+                        if (useTimestamps) {
+                            processedTranscriptHtml = processTimestampLinks(transcriptContentHtml); // Process the content string directly
+                        }
+                        // Prepend action buttons
+                        transcriptTab.innerHTML = getActionButtonsHtml('transcript') + processedTranscriptHtml;
+                    } catch (error) {
+                        showProgress(false);
+                        showNotification(`Error fetching transcript: ${error.message}`, 'error');
+                        return;
+                    }
+                }
+                
+                // Generate content based on action
+                let prompt, result;
+                if (action === 'summarize') {
+                    prompt = settings.summaryPrompt;
+                } else {
+                    prompt = settings.mindmapPrompt;
+                }
+                
+                // Generate content
+                try {
+                    // Use timestamped transcript if available and needed for better context
+                    const transcriptToUse = settings.useTimestampedTranscript ? timestampedTranscript : currentTranscript;
+                    result = await generateContent(prompt, transcriptToUse);
+                    
+                    // Render the result with markdown
+                    const contentElement = document.getElementById(tabId);
+                    const tabType = tabId.replace('-tab', ''); // 'summary' or 'mindmap'
+                    const processedResult = processTimestampLinks(marked.parse(result));
+                    const sanitizedHTML = DOMPurify.sanitize(processedResult, {
+                        ADD_ATTR: ['onclick'] // Allow onclick for timestamp navigation
+                    });
+                    // Prepend action buttons
+                    contentElement.innerHTML = getActionButtonsHtml(tabType) + sanitizedHTML;
+                    
+                    // Re-attach the navigateToTimestamp function to window for onclick handling
+                    window.navigateToTimestamp = navigateToTimestamp;
+                } catch (error) {
+                    showNotification(`Error generating ${action}: ${error.message}`, 'error');
+                }
+                
+                // Hide loading progress
+                showProgress(false);
+            } catch (error) {
+                showProgress(false);
+                showNotification(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Ask follow-up question
+        async function askFollowUpQuestion() {
+            if (!currentVideoId || !currentTranscript) {
+                showNotification('Please summarize a video first before asking follow-up questions.', 'error');
+                return;
+            }
+            
+            const questionInput = document.getElementById('followup-question');
+            const question = questionInput.value.trim();
+            
+            if (!question) {
+                showNotification('Please enter a question.', 'error');
+                return;
+            }
+            
+            // Show loading progress
+            showProgress(true);
+            
+            try {
+                // Switch to the questions tab
+                const questionsTab = document.querySelector('[data-tab="questions-tab"]');
+                switchTab(questionsTab);
+                
+                // Create prompt for follow-up
+                let prompt = settings.followupPrompt
+                    .replace('{{QUESTION}}', question)
+                    .replace('{{TRANSCRIPT}}', settings.useTimestampedTranscript ? timestampedTranscript : currentTranscript);
+                
+                // Get answer from AI
+                const answer = await generateContent(prompt, '');
+                
+                // Display question and answer
+                const followupContainer = document.getElementById('followup-answers');
+                
+                // Create a new question-answer pair
+                const qaElement = document.createElement('div');
+                qaElement.className = 'border-b pb-4 mb-4';
+                
+                const questionElement = document.createElement('div');
+                questionElement.className = 'font-bold mb-2';
+                questionElement.style.color = 'var(--primary-color)';
+                questionElement.innerHTML = `<i class="mdi mdi-account-question-outline mr-1"></i> ${question}`;
+                
+                const answerElement = document.createElement('div');
+                answerElement.className = 'pl-4 border-l-4 mb-2';
+                answerElement.style.borderColor = 'var(--secondary-color)';
+                
+                // Process the answer to make timestamps clickable
+                const processedAnswer = processTimestampLinks(marked.parse(answer));
+                const sanitizedHTML = DOMPurify.sanitize(processedAnswer, {
+                    ADD_ATTR: ['onclick'] // Allow onclick for timestamp navigation
+                });
+                answerElement.innerHTML = sanitizedHTML;
+                
+                // Add question and answer to the container
+                qaElement.appendChild(questionElement);
+                qaElement.appendChild(answerElement);
+                
+                // If this is the first Q&A, clear the placeholder
+                if (followupContainer.querySelector('.placeholder')) {
+                    followupContainer.innerHTML = '';
+                }
+                
+                // Add to top of the list
+                followupContainer.insertBefore(qaElement, followupContainer.firstChild);
+                
+                // Clear the input
+                questionInput.value = '';
+                
+                // Re-attach the navigateToTimestamp function to window for onclick handling
+                window.navigateToTimestamp = navigateToTimestamp;
+            } catch (error) {
+                showNotification(`Error getting answer: ${error.message}`, 'error');
+            } finally {
+                showProgress(false);
+            }
+        }
+
+        // Switch tab
+        function switchTab(tabElement) {
+            // Get all tabs and content
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content > div');
+            
+            // Remove active class from all tabs
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+                tab.style.color = 'var(--text-secondary)';
+                tab.style.borderColor = 'transparent';
+            });
+            
+            // Add active class to clicked tab
+            tabElement.classList.add('active');
+            tabElement.style.color = 'var(--primary-color)';
+            tabElement.style.borderColor = 'var(--primary-color)';
+            
+            // Get target tab ID
+            const targetId = tabElement.getAttribute('data-tab');
+            
+            // Hide all tab contents
+            tabContents.forEach(content => content.classList.add('hidden'));
+            
+            // Show target tab content
+            document.getElementById(targetId).classList.remove('hidden');
+        }
+
+        // JPG export function using html2canvas and postMessage
+        function exportToJPG(contentId, filename) {
+            const element = document.getElementById(contentId);
+            if (!element || !window.html2canvas) {
+                showNotification('Error: html2canvas library not loaded.', 'error');
+                return;
+            }
+
+            // Create a clone to avoid modifying the original, remove buttons
+            const cloneElement = element.cloneNode(true);
+            const actionBtns = cloneElement.querySelectorAll('.tab-actions');
+            actionBtns.forEach(btn => btn.remove());
+
+            // Temporarily append clone to body off-screen to ensure rendering
+            cloneElement.style.position = 'absolute';
+            cloneElement.style.left = '-9999px';
+            document.body.appendChild(cloneElement);
+
+            showNotification('Generating image for download...', 'info'); // Indicate processing
+
+            html2canvas(cloneElement, {
+                scale: 2, // Increase scale for better resolution
+                useCORS: true, // Important for external images/fonts if any
+                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--card-color').trim() || '#ffffff' // Use theme background
+            }).then(canvas => {
+                // Get base64 data URL
+                const base64DataURL = canvas.toDataURL('image/jpeg', 0.95); // Use JPEG format with quality
+
+                // Send message to parent window (React container) to handle download
+                if (!parentOrigin) {
+                    showNotification('Cannot send download request: Parent origin not yet established.', 'error');
+                    return; // Don't proceed if parent origin isn't known
+                }
+                window.parent.postMessage({
+                    type: 'requestFileDownload',
+                    payload: {
+                        filename: filename,
+                        base64Data: base64DataURL
+                    }
+                }, parentOrigin);
+
+            }).catch(err => {
+                console.error('Error exporting JPG:', err);
+                showNotification('Error generating JPG. Check console for details.', 'error');
+            }).finally(() => {
+                 // Clean up the cloned element
+                 document.body.removeChild(cloneElement);
+            });
+        }
+
+        // View content as JPG in modal
+        function viewAsJPG(contentId) {
+            console.log(`viewAsJPG called for contentId: ${contentId}`);
+            const element = document.getElementById(contentId);
+            const modal = document.getElementById('image-viewer-modal');
+            const modalImage = document.getElementById('modal-image');
+            const zoomLevelDisplay = document.getElementById('zoom-level');
+
+            // Check prerequisites
+            if (!element) {
+                console.error(`viewAsJPG Error: Element with ID '${contentId}' not found.`);
+                showNotification(`Error: Could not find content element '${contentId}'.`, 'error');
+                return;
+            }
+            if (!modal) {
+                console.error('viewAsJPG Error: Image viewer modal element not found.');
+                showNotification('Error: Image viewer modal not found.', 'error');
+                return;
+            }
+            if (!modalImage) {
+                console.error('viewAsJPG Error: Modal image element not found.');
+                showNotification('Error: Modal image element not found.', 'error');
+                return;
+            }
+            if (!window.html2canvas) {
+                console.error('viewAsJPG Error: html2canvas library is not loaded.');
+                showNotification('Error: html2canvas library not loaded.', 'error');
+                return;
+            }
+
+            console.log('All prerequisites for viewAsJPG met.');
+
+            // Reset previous image and zoom
+            modalImage.src = ''; // Clear previous image
+            modalImage.style.transform = 'scale(1)';
+            currentZoom = 1.0; // Reset zoom variable
+            if (zoomLevelDisplay) zoomLevelDisplay.textContent = '100%';
+
+            // Show loader inside modal temporarily
+            modalImage.alt = "Generating image...";
+
+            // Show the modal
+            console.log('Attempting to show modal...');
+            modal.classList.add('show');
+
+            // Create a clone to avoid modifying the original, remove buttons
+            const cloneElement = element.cloneNode(true);
+            const actionBtns = cloneElement.querySelectorAll('.tab-actions');
+            actionBtns.forEach(btn => btn.remove());
+
+            // Temporarily append clone to body off-screen
+            cloneElement.style.position = 'absolute';
+            cloneElement.style.left = '-9999px';
+            document.body.appendChild(cloneElement);
+
+            html2canvas(cloneElement, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--card-color').trim() || '#ffffff'
+            }).then(canvas => {
+                modalImage.src = canvas.toDataURL('image/jpeg', 0.95);
+                modalImage.alt = "Generated Content"; // Reset alt text
+            }).catch(err => {
+                console.error('Error generating JPG for view:', err);
+                showNotification('Error generating image for view. Check console.', 'error');
+                modalImage.alt = "Error generating image";
+            }).finally(() => {
+                // Clean up the cloned element
+                document.body.removeChild(cloneElement);
+            });
+        }
+
+        // Setup Image Viewer Modal
+        function setupImageViewer() {
+            const modal = document.getElementById('image-viewer-modal');
+            const closeBtn = document.getElementById('close-image-viewer');
+            const zoomInBtn = document.getElementById('zoom-in-btn');
+            const zoomOutBtn = document.getElementById('zoom-out-btn');
+            const modalImage = document.getElementById('modal-image');
+            const zoomLevelDisplay = document.getElementById('zoom-level');
+
+            if (!modal || !closeBtn || !zoomInBtn || !zoomOutBtn || !modalImage || !zoomLevelDisplay) return;
+
+            const updateZoom = () => {
+                modalImage.style.transform = `scale(${currentZoom})`;
+                zoomLevelDisplay.textContent = `${Math.round(currentZoom * 100)}%`;
+            };
+
+            zoomInBtn.addEventListener('click', () => {
+                currentZoom += zoomStep;
+                updateZoom();
+            });
+
+            zoomOutBtn.addEventListener('click', () => {
+                currentZoom = Math.max(0.1, currentZoom - zoomStep); // Prevent zooming out too much
+                updateZoom();
+            });
+
+            closeBtn.addEventListener('click', closeImageViewer);
+
+            // Close modal on clicking outside the content
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeImageViewer();
+                }
+            });
+        }
+
+        function closeImageViewer() {
+            console.log('Attempting to close image viewer modal...');
+            const modal = document.getElementById('image-viewer-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                
+                // Reset zoom when closing
+                currentZoom = 1.0;
+                const modalImage = document.getElementById('modal-image');
+                const zoomLevelDisplay = document.getElementById('zoom-level');
+                if (modalImage) {
+                    modalImage.style.transform = 'scale(1)';
+                    modalImage.src = ''; // Clear image src
+                    modalImage.alt = 'Generated Content';
+                }
+                if (zoomLevelDisplay) zoomLevelDisplay.textContent = '100%';
+                console.log('Image viewer modal closed and reset.');
+            } else {
+                console.error('Could not find image viewer modal to close.');
+            }
+        }
+
+        // Copy content to clipboard
+        function copyToClipboard(contentId) {
+            const contentElement = document.getElementById(contentId);
+            if (!contentElement) return;
+            
+            // Get text content
+            let text = contentElement.textContent || contentElement.innerText;
+            
+            // Create a temporary textarea to copy from
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                document.execCommand('copy');
+                showNotification('Content copied to clipboard!', 'success');
+            } catch (err) {
+                console.error('Failed to copy content:', err);
+                showNotification('Failed to copy content', 'error');
+            }
+            
+            document.body.removeChild(textarea);
+        }
+
+        // Update Clock Hands
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours() % 12;
+            const m = now.getMinutes();
+            const s = now.getSeconds();
+            const hourAngle = (h * 30) + (m * 0.5);
+            const minuteAngle = m * 6;
+            const secondAngle = s * 6;
+            document.getElementById('hourHand').style.transform = `translate(-50%, 0) rotate(${hourAngle}deg)`;
+            document.getElementById('minuteHand').style.transform = `translate(-50%, 0) rotate(${minuteAngle}deg)`;
+            document.getElementById('secondHand').style.transform = `translate(-50%, 0) rotate(${secondAngle}deg)`;
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize clock
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // Initialize settings
+            initSettings();
+            
+            // Initialize YouTube API
+            initYouTubeAPI();
+
+            // Setup Image Viewer Modal listeners
+            setupImageViewer();
+
+            // Add Message Listener for Parent Communication
+            window.addEventListener('message', (event) => {
+                const message = event.data;
+                console.log("Message received from parent:", message, "Origin:", event.origin);
+
+                // Handle receiving parent origin
+                if (message.type === 'parentOrigin') {
+                    if (typeof message.origin === 'string' && message.origin.startsWith('http')) {
+                        parentOrigin = message.origin;
+                        console.log("Parent origin established:", parentOrigin);
+                    } else {
+                        console.error("Received invalid parent origin:", message.origin);
+                    }
+                    return;
+                }
+
+                // Security Check: Only process messages from the established parent origin
+                if (!parentOrigin || event.origin !== event.origin) {
+                    console.warn(`Message rejected. Event origin "${event.origin}" does not match established parent origin "${parentOrigin}".`);
+                    return;
+                }
+
+                // Process other message types
+                if (message.type === 'clipboardReadResult') {
+                    if (message.error) {
+                        showNotification(`Clipboard Error: ${message.error}`, 'error');
+                    } else {
+                        document.getElementById('youtube-url').value = message.data || '';
+                        showNotification('Pasted from clipboard!', 'success');
+                    }
+                } else if (message.type === 'fileDownloadResult') {
+                     if (message.success) {
+                         showNotification(`File saved successfully: ${message.uri || ''}`, 'success');
+                     } else {
+                         showNotification(`File save failed: ${message.error || 'Unknown error'}`, 'error');
+                     }
+                }
+            });
+
+            // Tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    switchTab(this);
+                });
+            });
+
+            // Theme toggle
+            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+            // Paste button - Modified to use postMessage with origin check
+            document.getElementById('paste-btn').addEventListener('click', function() {
+                if (!parentOrigin) {
+                    showNotification('Cannot paste: Parent origin not yet established.', 'error');
+                    return; // Don't proceed if parent origin isn't known
+                }
+                console.log("Requesting clipboard read from parent:", parentOrigin);
+                window.parent.postMessage({ type: 'requestClipboardRead' }, parentOrigin); // Target specific parent origin
+            });
+
+            // Summarize button
+            document.getElementById('summarize-btn').addEventListener('click', function() {
+                processVideo('summarize');
+            });
+            
+            // Mindmap button
+            document.getElementById('mindmap-btn').addEventListener('click', function() {
+                processVideo('mindmap');
+            });
+            
+            // Ask follow-up question button
+            document.getElementById('ask-question-btn').addEventListener('click', function() {
+                askFollowUpQuestion();
+            });
+            
+            // Handle Enter key in follow-up question input
+            document.getElementById('followup-question').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    askFollowUpQuestion();
+                }
+            });
+            
+            // Settings button
+            document.getElementById('settings-btn').addEventListener('click', function() {
+                document.getElementById('settings-modal').classList.add('show');
+            });
+            
+            // Close settings button
+            document.getElementById('close-settings').addEventListener('click', function() {
+                document.getElementById('settings-modal').classList.remove('show');
+            });
+            
+            // Save settings button
+            document.getElementById('save-settings').addEventListener('click', function() {
+                saveSettings();
+                document.getElementById('settings-modal').classList.remove('show');
+            });
+            
+            // Reset settings button
+            document.getElementById('reset-settings').addEventListener('click', function() {
+                resetSettings();
+            });
+            
+            // Refresh models button
+            document.getElementById('refresh-models-btn').addEventListener('click', function() {
+                fetchGeminiModels();
+            });
+            
+            // Fallback model change
+            document.getElementById('fallback-model').addEventListener('change', function() {
+                const fallbackModel = this.value;
+                document.getElementById('fallback-api-key-container').style.display = 
+                    fallbackModel !== 'none' ? 'block' : 'none';
+            });
+            
+            // URL input event for auto-loading video
+            document.getElementById('youtube-url').addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    const videoId = getYouTubeVideoId(this.value);
+                    if (videoId) {
+                        loadYouTubePlayer(videoId);
+                    }
+                }
+            });
+            
+            // URL input blur event for auto-loading video
+            document.getElementById('youtube-url').addEventListener('blur', function() {
+                const videoId = getYouTubeVideoId(this.value);
+                if (videoId) {
+                    loadYouTubePlayer(videoId);
+                }
+            });
+            
+            // Event Delegation for dynamically added buttons (Copy/Download)
+            const mainContent = document.querySelector('.content-card'); // Attach listener to a static parent
+
+            mainContent.addEventListener('click', function(event) {
+                const target = event.target.closest('button'); // Find the closest button element
+                if (!target) return; // Exit if the click wasn't on or inside a button
+
+                const id = target.id;
+
+                if (id === 'copy-summary-btn') {
+                    copyToClipboard('summary-tab');
+                } else if (id === 'download-summary-btn') {
+                    exportToJPG('summary-tab', 'youtube-summary.jpg');
+                } else if (id === 'view-summary-jpg-btn') {
+                    viewAsJPG('summary-tab');
+                } else if (id === 'copy-mindmap-btn') {
+                    copyToClipboard('mindmap-tab');
+                } else if (id === 'download-mindmap-btn') {
+                    exportToJPG('mindmap-tab', 'youtube-mindmap.jpg');
+                } else if (id === 'view-mindmap-jpg-btn') {
+                    viewAsJPG('mindmap-tab');
+                } else if (id === 'copy-transcript-btn') {
+                    copyToClipboard('transcript-tab');
+                } else if (id === 'download-transcript-btn') {
+                    exportToJPG('transcript-tab', 'youtube-transcript.jpg');
+                } else if (id === 'view-transcript-jpg-btn') {
+                    viewAsJPG('transcript-tab');
+                }
+            });
+            
+            // Modal click outside to close
+            document.getElementById('settings-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('show');
+                }
+            });
+            
+            // Expose the navigateToTimestamp function globally
+            window.navigateToTimestamp = navigateToTimestamp;
+        });
+    </script>
+</body>
+</html>
