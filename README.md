@@ -27,11 +27,11 @@ Quickly get summaries, mind maps, and insights from YouTube videos using AI.
 ![App Screenshot](sceenshot.png)
 
 Highlights 360 helps you understand YouTube videos without watching the whole thing.
-It uses AI (Google Gemini) to analyze transcripts and create:
+It uses AI (Google Gemini) to analyze whole videos or transcripts (depends on video-duration) and create:
 
-*   **Summaries:** Short, clear overviews.
+*   **Summaries:** Short, clear overviews, with visual cues.
 *   **Mind Maps:** Visual charts of ideas.
-*   **Transcripts:** Full video text (optional timestamps).
+*   **Transcripts:** Full video text (with timestamps).
 *   **Follow-up Insights:** AI answers to your questions about the video.
 
 The app runs in your browser.
@@ -69,15 +69,15 @@ They stay in your browser's local storage.
         *   Sign in or create a Google account.
         *   Click "Get API key".
     *   **RapidAPI Key:**
-        *   Sign up at [RapidAPI](https://rapidapi.com/) (or log in with Google).
-        *   Subscribe to the Basic plan for "YouTube Transcript" API.
-        *   Subscribe to the Basic plan for "YouTube v3" API.
+        *   Sign up at [RapidAPI](https://rapidapi.com/) (or sign in with Google).
+        *   Subscribe to the Basic plan for "YouTube Transcript" API [here](https://rapidapi.com/solid-api-solid-api-default/api/youtube-transcript3/pricing).
+        *   Subscribe to the Basic plan for "YouTube v3" API [here](https://rapidapi.com/ytdlfree/api/youtube-v31/pricing).
         *   Copy your RapidAPI key from your dashboard.
 2.  **Configure the App:**
     *   Click the settings icon (⚙️) (bottom right).
     *   Enter your Gemini and RapidAPI keys.
     *   Choose your Gemini model (or click "Refresh Models").
-    *   Set optional fallback models, max video length, etc.
+    *   Set optional fallback models (not tested), max video length, etc.
     *   Customize prompts if needed.
     *   Click "Save Settings".
 
