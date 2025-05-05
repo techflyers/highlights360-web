@@ -2,123 +2,153 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An AI-powered tool to extract summaries, mind maps, and insights from YouTube videos[cite: 1].
+Quickly get summaries, mind maps, and insights from YouTube videos using AI.
 
-**Tags:** YouTube, AI-Powered, Summarization, Mind Maps, Google Gemini, Client-Side [cite: 1]
+**Tags:** YouTube, AI, Summaries, Mind Maps, Google Gemini, Client-Side
 
-![App Screenshot Placeholder] ## Overview
+## Table of Contents
 
-Highlights 360 is a specialized web application designed to help users extract valuable insights from YouTube videos without watching them in their entirety[cite: 10]. It leverages AI technology (primarily Google's Gemini) to analyze video transcripts and generate different types of content[cite: 10]:
+- [Highlights 360 - YouTube Video Summarizer](#highlights-360---youtube-video-summarizer)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Requirements](#requirements)
+  - [Setup \& Configuration](#setup--configuration)
+  - [Usage Guide](#usage-guide)
+  - [AI Models \& Prompts](#ai-models--prompts)
+  - [Technical Details](#technical-details)
+  - [License](#license)
+  - [Contact](#contact)
+  - [Acknowledgments](#acknowledgments)
+  - [Limitations \& Future Improvements](#limitations--future-improvements)
 
-* **Summaries:** Concise, well-structured overviews of the video content[cite: 10].
-* **Mind Maps:** Hierarchical representations of concepts and their relationships[cite: 10].
-* **Transcripts:** Full text of the video with optional timestamps[cite: 10].
-* **Follow-up Insights:** AI-generated answers to specific questions about the content[cite: 10].
+## Overview
 
-The application runs entirely in the browser, using external APIs for transcript retrieval and AI processing[cite: 11]. This architecture ensures user privacy while providing powerful functionality[cite: 11].
+![App Screenshot](sceenshot.png)
+
+Highlights 360 helps you understand YouTube videos without watching the whole thing.
+It uses AI (Google Gemini) to analyze transcripts and create:
+
+*   **Summaries:** Short, clear overviews.
+*   **Mind Maps:** Visual charts of ideas.
+*   **Transcripts:** Full video text (optional timestamps).
+*   **Follow-up Insights:** AI answers to your questions about the video.
+
+The app runs in your browser.
+It uses external APIs for transcripts and AI.
+This keeps your data private.
 
 ## Features
 
-* **Video Summaries:** Convert lengthy YouTube videos into concise, structured summaries with key points highlighted[cite: 2].
-* **Mind Maps:** Generate hierarchical mind maps that visually organize the content and concepts from videos[cite: 3].
-* **Timestamped Transcripts:** Access full video transcripts with clickable timestamps for easy navigation[cite: 4].
-* **Follow-up Q&A:** Ask specific questions about the video content and receive AI-generated answers[cite: 5].
-* **Dark/Light Theme:** Toggle between dark and light themes for comfortable viewing[cite: 6].
-* **Export Capabilities:** Save summaries, mind maps, and transcripts as JPG images or copy to clipboard[cite: 6].
-* **Customizable Settings:** Configure AI models, API keys, prompt templates, and transcript preferences[cite: 8].
-* **Responsive Design:** Works seamlessly across desktop and mobile devices with adaptive layouts[cite: 9].
+*   **Video Summaries:** Turn long videos into short summaries.
+*   **Mind Maps:** Create visual maps of video content.
+*   **Timestamped Transcripts:** Get full transcripts with clickable times.
+*   **Follow-up Q&A:** Ask questions about the video and get AI answers.
+*   **Dark/Light Theme:** Switch themes (light theme has known bugs).
+*   **Export:** Save summaries, maps, and transcripts as JPG or copy text.
+*   **Settings:** Set up AI models, API keys, prompts, and transcripts.
+*   **Mobile-Focused Design:** Best used on mobile devices (Especially on apps).
 
 ## Requirements
 
-To use all features of Highlights 360, you'll need[cite: 12]:
+You need these to use all features:
 
-* **Gemini API Key:** For AI-powered summary and mind map generation.
-* **RapidAPI Key:** For accessing YouTube transcripts.
-* **Modern Web Browser:** Chrome, Firefox, Safari, or Edge recommended.
-* **Internet Connection:** Required for API calls and YouTube video loading.
+*   **Gemini API Key:** For AI summaries and mind maps.
+*   **RapidAPI Key:** For YouTube transcripts.
+*   **Modern Web Browser:** Chrome, Firefox, Safari, or Edge.
+*   **Internet Connection:** For APIs and video loading.
 
-*Note:* While the application requires API keys for full functionality, it does not store or transmit your keys beyond the necessary API requests[cite: 12]. All keys are stored locally in your browser's localStorage[cite: 12].
+*Note:* API keys are needed but not stored online.
+They stay in your browser's local storage.
 
 ## Setup & Configuration
 
 1.  **Get API Keys:**
-    * **Gemini API Key:**
-        * Visit the [Google AI Studio](https://aistudio.google.com/)[cite: 13].
-        * Create or sign in to your Google account[cite: 13].
-        * Navigate to the "API keys" section and create a new API key[cite: 13].
-    * **RapidAPI Key:**
-        * Sign up at [RapidAPI](https://rapidapi.com/)[cite: 13].
-        * Subscribe to the "YouTube Transcript" API[cite: 13].
-        * Copy your RapidAPI key from the dashboard[cite: 13].
-2.  **Configure the Application:**
-    * Click the settings icon (⚙️) in the bottom right corner[cite: 13].
-    * Enter your Gemini API Key and RapidAPI Key[cite: 13].
-    * Select your preferred Gemini model (or click "Refresh Models")[cite: 13].
-    * Optionally, configure fallback models, maximum video duration, and transcript settings[cite: 13].
-    * Customize prompt templates if desired[cite: 13].
-    * Click "Save Settings" to store your configuration[cite: 13].
+    *   **Gemini API Key:**
+        *   Go to [Google AI Studio](https://aistudio.google.com/).
+        *   Sign in or create a Google account.
+        *   Click "Get API key".
+    *   **RapidAPI Key:**
+        *   Sign up at [RapidAPI](https://rapidapi.com/) (or log in with Google).
+        *   Subscribe to the Basic plan for "YouTube Transcript" API.
+        *   Subscribe to the Basic plan for "YouTube v3" API.
+        *   Copy your RapidAPI key from your dashboard.
+2.  **Configure the App:**
+    *   Click the settings icon (⚙️) (bottom right).
+    *   Enter your Gemini and RapidAPI keys.
+    *   Choose your Gemini model (or click "Refresh Models").
+    *   Set optional fallback models, max video length, etc.
+    *   Customize prompts if needed.
+    *   Click "Save Settings".
 
-**Important:** The application stores your API keys in your browser's localStorage[cite: 14]. Be cautious when using shared computers[cite: 14]. You can clear this data through your browser settings[cite: 15].
+**Important:** API keys are stored locally in your browser.
+Be careful on shared computers.
+You can clear this data in browser settings.
 
 ## Usage Guide
 
-1.  **Basic Usage:**
-    * Paste a YouTube URL or video ID in the input field[cite: 16].
-    * Click "Summarize" for a text summary or "Mindmap" for a visual map[cite: 16].
-    * Processing progress is shown via an animated indicator[cite: 16].
-    * Results appear in the corresponding tab when ready[cite: 16].
+1.  **Basic Use:**
+    *   Paste a YouTube URL or video ID.
+    *   Click "Summarize" or "Mindmap".
+    *   Wait for the progress indicator.
+    *   Results appear in the tabs.
 2.  **Working with Results:**
-    * **Navigate Tabs:** Switch between Summary, Mindmap, Transcript, and Follow-up views[cite: 17].
-    * **Timestamp Navigation:** Click timestamps in transcripts or responses to jump to that video point[cite: 17].
-    * **Copy Content:** Use the copy icon (📋) to copy tab content[cite: 17].
-    * **Export as JPG:** Use the download icon (💾) to save content as a JPG[cite: 17].
-    * **View as JPG:** Use the image search icon (🖼️) to preview the JPG with zoom[cite: 17].
+    *   **Tabs:** Switch between Summary, Mindmap, Transcript, Follow-up.
+    *   **Timestamps:** Click times in transcripts/responses to jump in the video.
+    *   **Copy:** Use the copy icon (📋) to copy text.
+    *   **Export JPG:** Use the download icon (💾) to save as JPG.
+    *   **View JPG:** Use the image icon (🖼️) to preview the JPG.
 3.  **Follow-up Questions:**
-    * Go to the "Follow-up" tab[cite: 18].
-    * Enter your question (e.g., "What was said about climate change?")[cite: 18].
-    * Click "Ask"[cite: 18].
-    * The AI generates an answer based on the transcript[cite: 18].
+    *   Go to the "Follow-up" tab.
+    *   Type your question (e.g., "What was said about X?").
+    *   Click "Ask".
+    *   AI gives an answer based on the transcript.
 
 ## AI Models & Prompts
 
-* **Supported AI Models:** Primarily Google Gemini models (`gemini-pro`, `gemini-1.5-pro`)[cite: 19]. Placeholder support for OpenAI, Claude, Groq, OpenRouter exists but requires implementation[cite: 19].
-* **Default Prompts:** The application uses specific prompts for summaries, mind maps, and follow-up questions. These are designed to produce structured, Markdown-formatted output with relevant details like timestamps[cite: 19, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].
-* **Customization:** Prompts can be customized in the settings[cite: 32].
+*   **AI Models:** Uses Google Gemini models (`gemini-pro`, `gemini-1.5-pro`).
+    Others (OpenAI, Claude, etc.) need setup.
+*   **Default Prompts:** Uses specific prompts for summaries, maps, and questions.
+    Designed for structured Markdown output with timestamps.
+*   **Customization:** Change prompts in settings.
 
 ## Technical Details
 
-* **Frontend:** Vanilla HTML, CSS, JavaScript[cite: 32].
-* **Styling:** Tailwind CSS[cite: 32].
-* **Icons:** Material Design Icons[cite: 32].
-* **Content Processing:** Marked.js (Markdown parsing), DOMPurify (security)[cite: 32].
-* **Media Processing:** html2canvas (JPG export)[cite: 32].
-* **API Communication:** Axios[cite: 32].
-* **Video Embedding:** YouTube iframe API[cite: 32].
-* **API Endpoints:**
-    * YouTube Transcript: `https://youtube-transcript3.p.rapidapi.com/api/transcript` [cite: 32]
-    * YouTube Video Details: `https://youtube-v31.p.rapidapi.com/videos` [cite: 32]
-    * Gemini API: `https://generativelanguage.googleapis.com/v1beta/models` [cite: 32]
-* **Data Storage:** Browser `localStorage` is used for API keys, settings, preferences, and custom prompts. Session content (summaries, etc.) is stored in memory and not persisted[cite: 32].
+*   **Frontend:** HTML, CSS, JavaScript.
+*   **Styling:** Tailwind CSS.
+*   **Icons:** Material Design Icons.
+*   **Content:** Marked.js (Markdown), DOMPurify (Security).
+*   **Media:** html2canvas (JPG export).
+*   **API:** Axios.
+*   **Video:** YouTube iframe API.
+*   **API Endpoints:**
+    *   YouTube Transcript: `https://youtube-transcript3.p.rapidapi.com/api/transcript`
+    *   YouTube Video Details: `https://youtube-v31.p.rapidapi.com/videos`
+    *   Gemini API: `https://generativelanguage.googleapis.com/v1beta/models`
+*   **Data Storage:** Uses browser `localStorage` for keys and settings.
+    Session content (summaries, etc.) is not saved.
 
 ## License
 
-Released under the [MIT License](https://opensource.org/licenses/MIT)[cite: 33].
+Released under the [MIT License](https://opensource.org/licenses/MIT).
 
 ## Contact
 
-Created by @techflyervp [cite: 33]
+Created by @techflyervp
 
 ## Acknowledgments
 
-* Google's Gemini API for AI processing[cite: 34].
-* RapidAPI for transcript extraction[cite: 34].
-* YouTube iframe API for video embedding[cite: 34].
+*   Google Gemini API
+*   RapidAPI
+*   YouTube iframe API
 
 ## Limitations & Future Improvements
 
-* **Limitations:** Processing very long videos might face API limits; currently optimized for English; fallback AI model support is basic; requires internet[cite: 35].
-* **Future Ideas:** Full fallback model implementation, enhanced multi-language support, persistent content storage, batch processing, additional export formats (PDF, Markdown)[cite: 35].
+*   **Limitations:** Very long videos might hit limits. Best for English.
+    Basic fallback AI support. Needs internet.
+*   **Future Ideas:** Better fallback models, save content,
+    batch processing, more export formats (PDF, Markdown).
 
 ---
 
-*This README was generated based on the provided document Highlights 360 - README.pdf.*
+*This project was made with help of AI.*
