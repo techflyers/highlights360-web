@@ -24,7 +24,7 @@ Quickly get summaries, mind maps, and insights from YouTube videos using AI.
 
 ## Overview
 
-<![CDATA[<img src="sceenshot.png" alt="App Screenshot" height="300" width="135">]]>
+<img src="sceenshot.png" alt="App Screenshot" height="450" width="202">
 
 Highlights 360 helps you understand YouTube videos without watching the whole thing.
 It uses AI (Google Gemini) to analyze whole videos or transcripts (depends on video-duration) and create:
