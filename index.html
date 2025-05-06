@@ -1575,13 +1575,13 @@ Transcript:
                     temperature: 0.7,
                     topK: 40,
                     topP: 0.95,
-                    maxOutputTokens: 8192
+                    maxOutputTokens: 1000000
                 }
             };
 
-            const urlentry = { file_data: { file_uri: globalURL || '' } };
+            const urlentry = { file_data: { file_uri: globalURL } };
 
-            if (globalURL !== '') {
+            if (globalURL !== '' && !(settings.useTimestampedTranscript) ) {
                 requestBody.contents[0].parts.push(urlentry);
             }
             
