@@ -1567,7 +1567,7 @@ Transcript:
                     {
                         parts: [
                             { text: prompt },
-                            { file_data: {file_uri: globalURL || '' } },
+                            { file_data: { "file_uri:" globalURL || '' } }, // File URI Fix invalid format
                             { text: transcript || '' } // Use empty string if transcript is null/undefined
                         ]
                     }
@@ -1836,7 +1836,7 @@ Transcript:
                         if (durationMinutes > settings.maxDuration) {
                             showNotification(`Video is longer than ${settings.maxDuration} minutes, using RapidAPI for transcript`, 'info');
                         } else {
-                            globalURL = document.getElementById('youtube-url');
+                            globalURL = document.getElementById('youtube-url').value;
                         }
                         
                         // Fetch transcript
