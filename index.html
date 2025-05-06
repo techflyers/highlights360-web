@@ -576,7 +576,6 @@
         }
 
         .markdown-content pre {
-            background-color: #f5f5f5;
             padding: 1rem;
             border-radius: 5px;
             overflow-x: auto;
@@ -584,7 +583,6 @@
         }
 
         .markdown-content code {
-            background-color: #f5f5f5;
             padding: 0.2rem 0.4rem;
             border-radius: 3px;
             font-family: monospace;
@@ -1071,7 +1069,7 @@
     </footer>
 
     <script>
-        // Constants and globals
+       // Constants and globals
         const DEFAULT_SETTINGS = {
             geminiApiKey: '',
             rapidApiKey: 'XXXXXX6a60msh82bac4061a5265cp130865jsn81e63855cfff',
@@ -1126,6 +1124,7 @@ Transcript:
         let currentVideoId = null;
         let currentTranscript = null;
         let timestampedTranscript = null;
+        let globalURL = null;
         let settings = { ...DEFAULT_SETTINGS };
         let availableModels = [];
         let playerInstance = null;
@@ -1466,8 +1465,14 @@ Transcript:
 
         // Fetch transcript using RapidAPI
         async function fetchTranscript(videoId, includeTimestamps = false) {
-            if (!videoId) throw new Error("Invalid Video ID for transcript fetching.");
-            if (!settings.rapidApiKey) throw new Error("RapidAPI Key is missing. Please configure it in Settings.");
+            if (!videoId) {
+                showNotification("Invalid Video ID for transcript fetching.", "error");
+                return "";
+            }
+            if (!settings.rapidApiKey) {
+                showNotification("RapidAPI Key is missing. Please configure it in Settings.", "error");
+                return "";
+            }
             
             let options;
             
@@ -1503,7 +1508,8 @@ Transcript:
                 
                 if (response.data && response.data.success && Array.isArray(response.data.transcript)) {
                     if (response.data.transcript.length === 0) {
-                        throw new Error(`Transcript is empty or disabled for this video.`);
+                        showNotification(`Transcript is empty or disabled for this video.`, "error");
+                        return "";
                     }
                     
                     if (includeTimestamps) {
@@ -1529,15 +1535,17 @@ Transcript:
                         return currentTranscript;
                     }
                 } else {
-                    throw new Error("Transcript not available or format is incorrect.");
+                    showNotification("Transcript not available or format is incorrect.", "error");
+                    return "";
                 }
             } catch (error) {
                 console.error("Error fetching transcript:", error.response?.data || error.message);
-                throw new Error(`Failed to fetch transcript: ${error.message}`);
+                showNotification(`Failed to fetch transcript: ${error.message}`, "error");
+                return "";
             }
         }
 
-        // Call Gemini API
+        // Call Gemini API with updated format
         async function callGeminiApi(prompt, transcript) {
             if (!settings.geminiApiKey) {
                 throw new Error("Gemini API Key is missing. Please configure it in Settings.");
@@ -1553,12 +1561,14 @@ Transcript:
             
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.geminiModel}:generateContent?key=${settings.geminiApiKey}`;
             
+            // Updated request body format with file_data structure
             const requestBody = {
                 contents: [
                     {
                         parts: [
                             { text: prompt },
-                            { text: transcript }
+                            { file_data: {file_uri: globalURL || '' } },
+                            { text: transcript || '' } // Use empty string if transcript is null/undefined
                         ]
                     }
                 ],
@@ -1594,11 +1604,80 @@ Transcript:
             }
         }
 
-        // Call fallback API (placeholder for other APIs)
+        // Call Groq API
+        async function callGroqApi(prompt, transcript) {
+            if (!settings.fallbackApiKey) {
+                throw new Error("Groq API Key is missing. Please configure it in Settings.");
+            }
+            
+            // Determine which Groq model to use based on fallback selection
+            let modelName;
+            switch(settings.fallbackModel) {
+                case 'groq-llama3-70b':
+                    modelName = 'llama-3.1-70b-versatile';
+                    break;
+                case 'groq-llama3-8b':
+                    modelName = 'llama-3.1-8b-versatile';
+                    break;
+                case 'groq-mixtral':
+                    modelName = 'mixtral-8x7b-32768';
+                    break;
+                default:
+                    throw new Error("Unknown Groq model selected");
+            }
+            
+            const url = 'https://api.groq.com/openai/v1/chat/completions';
+            
+            const requestBody = {
+                model: modelName,
+                messages: [
+                    {
+                        role: "user",
+                        content: `${prompt}\n\n${transcript || ''}`
+                    }
+                ],
+                temperature: 0.7,
+                max_tokens: 8192
+            };
+            
+            try {
+                console.log("Calling Groq API with model:", modelName);
+                
+                const response = await axios.post(url, requestBody, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${settings.fallbackApiKey}`
+                    }
+                });
+                
+                // Check response structure
+                if (response.data && response.data.choices && response.data.choices.length > 0) {
+                    const choice = response.data.choices[0];
+                    if (choice.message && choice.message.content) {
+                        return choice.message.content;
+                    }
+                }
+                
+                throw new Error("Failed to parse valid content from Groq response.");
+            } catch (error) {
+                console.error("Error calling Groq API:", error.response?.data || error.message);
+                throw new Error(`Groq API request failed: ${error.message}`);
+            }
+        }
+
+        // Call fallback API
         async function callFallbackApi(prompt, transcript) {
-            // This is a placeholder function that would be implemented for other APIs
-            // like OpenAI, Claude, Groq, or OpenRouter
-            throw new Error("Fallback API not implemented yet. Please use Gemini API.");
+            // Check which fallback model is selected and route to appropriate API
+            switch (settings.fallbackModel) {
+                case 'none':
+                    return await callGeminiApi(prompt, transcript);
+                case 'groq-llama3-70b':
+                case 'groq-llama3-8b':
+                case 'groq-mixtral':
+                    return await callGroqApi(prompt, transcript);
+                default:
+                    throw new Error("Unsupported fallback model selected.");
+            }
         }
 
         // Process timestamp links in AI responses
@@ -1756,6 +1835,8 @@ Transcript:
                         
                         if (durationMinutes > settings.maxDuration) {
                             showNotification(`Video is longer than ${settings.maxDuration} minutes, using RapidAPI for transcript`, 'info');
+                        } else {
+                            globalURL = document.getElementById('youtube-url');
                         }
                         
                         // Fetch transcript
@@ -1776,7 +1857,7 @@ Transcript:
                     } catch (error) {
                         showProgress(false);
                         showNotification(`Error fetching transcript: ${error.message}`, 'error');
-                        return;
+                        // Continue with empty transcript rather than returning
                     }
                 }
                 
@@ -1820,7 +1901,7 @@ Transcript:
 
         // Ask follow-up question
         async function askFollowUpQuestion() {
-            if (!currentVideoId || !currentTranscript) {
+            if (!currentVideoId) {
                 showNotification('Please summarize a video first before asking follow-up questions.', 'error');
                 return;
             }
@@ -1844,7 +1925,7 @@ Transcript:
                 // Create prompt for follow-up
                 let prompt = settings.followupPrompt
                     .replace('{{QUESTION}}', question)
-                    .replace('{{TRANSCRIPT}}', settings.useTimestampedTranscript ? timestampedTranscript : currentTranscript);
+                    .replace('{{TRANSCRIPT}}', settings.useTimestampedTranscript ? timestampedTranscript : currentTranscript || '');
                 
                 // Get answer from AI
                 const answer = await generateContent(prompt, '');
