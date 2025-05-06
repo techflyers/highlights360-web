@@ -1560,14 +1560,13 @@ Transcript:
             }
             
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.geminiModel}:generateContent?key=${settings.geminiApiKey}`;
-            
+
             // Updated request body format with file_data structure
             const requestBody = {
                 contents: [
                     {
                         parts: [
                             { text: prompt },
-                            { file_data: { "file_uri:" globalURL || '' } }, // File URI Fix invalid format
                             { text: transcript || '' } // Use empty string if transcript is null/undefined
                         ]
                     }
@@ -1579,6 +1578,13 @@ Transcript:
                     maxOutputTokens: 8192
                 }
             };
+
+            const urlentry = { file_data: { file_uri: globalURL || '' } };
+
+            if (globalURL !== '') {
+                requestBody.contents[0].parts.push(urlentry);
+            }
+            
             
             try {
                 console.log("Calling Gemini API with model:", settings.geminiModel);
