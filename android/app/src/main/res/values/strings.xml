@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">yt-summary-android</string>
+    <string name="title_activity_main">yt-summary-android</string>
+    <string name="package_name">com.ytsummary.app</string>
+    <string name="custom_url_scheme">com.ytsummary.app</string>
+</resources>
